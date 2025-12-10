@@ -1,26 +1,72 @@
-import { Injectable } from '@nestjs/common';
-import { CreateStudentInput } from './dto/create-student.input';
-import { UpdateStudentInput } from './dto/update-student.input';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { CreateStudentInput } from "./dto/create-student.input";
+import { UpdateStudentInput } from "./dto/update-student.input";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Student } from "./entities/student.entity";
+import { Repository } from "typeorm";
 
 @Injectable()
 export class StudentService {
-  create(createStudentInput: CreateStudentInput) {
-    return 'This action adds a new student';
+  constructor(
+    @InjectRepository(Student) private studentRepo: Repository<Student>
+  ) {}
+
+  async create(createStudentInput: CreateStudentInput) {
+    const {
+      full_name,
+      phone_number,
+      profession,
+      parent_name,
+      parent_number,
+      img_url,
+    } = createStudentInput;
+  
+    const student = this.studentRepo.create({
+      full_name,
+      phone_number,
+      profession,
+      parent_name,
+      parent_number,
+      img_url,
+      joined_at: new Date(),
+    });
+  
+    await this.studentRepo.save(student);
+    return student;
+  }
+  
+
+  async findAll() {
+    const students = await this.studentRepo.find();
+    return students;
   }
 
-  findAll() {
-    return `This action returns all student`;
+  async findOne(id: number) {
+    const student = await this.studentRepo.findOneBy({ id });
+    if (!student) {
+      throw new NotFoundException("Student not found");
+    }
+    return student;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} student`;
+  async update(id: number, updateStudentInput: UpdateStudentInput) {
+    const student = await this.studentRepo.findOneBy({ id });
+    if (!student) {
+      throw new NotFoundException("Student not found");
+    }
+  
+    this.studentRepo.merge(student, updateStudentInput);
+    const updatedStudent = await this.studentRepo.save(student);
+  
+    return updatedStudent;
   }
 
-  update(id: number, updateStudentInput: UpdateStudentInput) {
-    return `This action updates a #${id} student`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} student`;
+  async remove(id: number) {
+    const student = await this.studentRepo.findOneBy({ id });
+    if (!student) {
+      throw new NotFoundException("Student not found");
+    }
+    await this.studentRepo.delete(id);
+    return student
   }
 }
